@@ -1,0 +1,128 @@
+f = open("text.txt")
+coords = []
+line = f.readline()
+while line:
+    c1, c2 = line[:-1].split(", ")
+    coords.append((int(c1), int(c2)))
+    line = f.readline()
+
+
+f.close()
+
+def dist(a, b):
+    v_d = None
+    if a[0] > b[0]:
+        v_d = len(range(b[0], a[0]))
+    else:
+        v_d = len(range(a[0], b[0]))
+
+    h_d = None
+    if a[1] > b[1]:
+        h_d = len(range(b[1], a[1]))
+    else:
+        h_d = len(range(a[1], b[1]))
+
+    return v_d + h_d
+
+def get_min_distance_from_arr(cell, arr):
+    min_distance = None
+    for x in arr:
+        distance = dist(x, cell)
+        if min_distance is None or distance < min_distance:
+            min_distance = distance
+    return min_distance
+
+def check_infinity(cell):
+    isInfinite = False
+    levels = [0, 0]
+    level_index = 0
+    max_distance = 0
+    for spiral_cell in spiral(cell):
+        if spiral_cell is None:
+            levels[level_index] = max_distance
+            level_index += 1
+            max_distance = 0
+            continue
+        if level_index > 1:
+            return levels[0] < levels[1]
+        new_distance = get_min_distance_from_arr(spiral_cell, [x for x in coords if x != cell])
+        if new_distance > max_distance:
+            max_distance = new_distance
+
+def categorize_points():
+    for point in coords:
+        if check_infinity(point):
+            infinite.add(point)
+        else:
+            finite.add(point)
+
+def spiral(cell):
+    '''Returns None after each level'''
+
+    def sub_spiral(cell, level):
+        level = level * 2 + 1
+        x, y = cell[0] - (level - 1)//2, cell[1] - (level - 1)//2
+        for xx in range(x, x + level):
+            yield (xx, y)
+            yield (xx, y + level - 1)
+
+        for yy in range(y - 1, y + level - 1):
+            yield (x, yy)
+            yield (x + level - 1, yy)
+
+    level = 1
+    while True:
+        yield from sub_spiral(cell, level)
+        level += 1
+        yield None
+
+def fill(cell, cell_d, orig_cell, distances):
+    min_dist = min(distances, key=lambda x: x[0])
+    print(cell, orig_cell, min_dist[1], cell_d, min_dist[0])
+    if min_dist[0] < cell_d:
+        print(cell, min_dist[1], cell_d, min_dist[0])
+        area[cell] = min_dist[1]
+    elif min_dist[0] == cell_d or any(x[0] == cell_d for x in distances):
+        area[cell] = '.'
+    else:
+        area[cell] = orig_cell
+        return True
+    return False
+
+
+def fill_neighbors(cell):
+    filled = True
+    for spiral_cell in spiral(cell):
+        if spiral_cell is None:
+            if not filled:
+                break
+            filled = False
+            continue
+
+        area_cell = area.get(spiral_cell, 0)
+        distances = None
+        if area_cell in finite:
+            distances = [(dist(spiral_cell, x), x) for x in finite]
+            continue
+        elif area_cell in infinite or area_cell == 0:
+            distances = [(dist(spiral_cell, x), x) for x in infinite]
+        else:
+            distances = [(dist(spiral_cell, x), x) for x in coords]
+
+        if fill(spiral_cell, dist(spiral_cell, cell), cell, distances):
+            filled = False
+
+
+infinite = set()
+finite = set()
+area = {}
+
+categorize_points()
+for x in finite:
+    fill_neighbors(x)
+
+print("finite = ", finite)
+print("infinite = ", infinite)
+
+for x in area:
+    print(x, area[x])
